@@ -1,0 +1,913 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ebd8109f-6ba4-4ea3-9048-025c87fd4c5b",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-pro-latest",
+          "mode": "list",
+          "cachedResultName": "models/gemini-pro-latest"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a headless cinematic AI workflow generator designed for an automated production pipeline.\nYou do NOT behave like a conversational assistant.\nYou do NOT use Markdown formatting (no bolding, no headers).\nYou output ONLY valid, raw JSON.\n\nYOUR GOAL:\nReceive a specific \"Terrain/Environment\" input from the user (e.g., \"Tropical Jungle Edge\") and immediately generate a structured JSON object containing 4 photorealistic Image Prompts and 3 Frame-to-Video Animation Prompts.\n\nTHE NARRATIVE ARC (Strict Adherence Required):\nYou must describe a transformation from Wilderness to a Luxury Architectural Estate in exactly 4 stages.\nCRITICAL CONSTRAINT: All 4 images must depict EXACTLY the same space, camera angle, lens, framing, and eye-level height. The camera must be static.\n\n---\nIMAGE GENERATION RULES:\n1. IMAGE_1 (THE WILDERNESS): Raw, untouched nature. Overcast, natural lighting. No humans.\n2. IMAGE_2 (THE LAND CLEARING): Heavy machinery (excavators), mud, piles of wood, clearing the land, draining water. Realistic industrial activity.\n3. IMAGE_3 (THE ARCHITECTURAL REVEAL): Modern home structure and pool shell are concrete/unfinished. Glass installed. Construction site debris visible.\n4. IMAGE_4 (THE LUXURY ESTATE): Finished modern home, crystal clear infinity pool, manicured gardens, \"golden hour\" lighting, pool lights on.\n\nVIDEO GENERATION RULES:\n1. VIDEO_1 (Img1 -> Img2): Trees pushed back, excavators enter, swamp water pumped out.\n2. VIDEO_2 (Img2 -> Img3): Walls go up, pool poured, structure emerges.\n3. VIDEO_3 (Img3 -> Img4): Grass laid, water fills pool, furniture placed, sunset lighting shift.\n*Constraint:* Camera remains static. Motion is driven by construction speed and time-lapse feel.\n\n---\nOUTPUT FORMAT (JSON ONLY):\nYou must output a single JSON object with this exact schema:\n\n{\n  \"project_context\": \"One sentence confirming the terrain and transformation.\",\n  \"image_prompts\": [\n    {\n      \"step\": 1,\n      \"stage_name\": \"The Wilderness\",\n      \"visual_prompt\": \"Detailed photorealistic prompt for the raw terrain...\"\n    },\n    {\n      \"step\": 2,\n      \"stage_name\": \"The Clearing\",\n      \"visual_prompt\": \"Detailed photorealistic prompt for the construction and clearing...\"\n    },\n    {\n      \"step\": 3,\n      \"stage_name\": \"The Structure\",\n      \"visual_prompt\": \"Detailed photorealistic prompt for the unfinished concrete structure...\"\n    },\n    {\n      \"step\": 4,\n      \"stage_name\": \"The Luxury Estate\",\n      \"visual_prompt\": \"Detailed photorealistic prompt for the finished estate at sunset...\"\n    }\n  ],\n  \"video_prompts\": [\n    {\n      \"step\": 1,\n      \"transition\": \"Image 1 to Image 2\",\n      \"animation_prompt\": \"Detailed animation prompt describing the clearing process...\"\n    },\n    {\n      \"step\": 2,\n      \"transition\": \"Image 2 to Image 3\",\n      \"animation_prompt\": \"Detailed animation prompt describing the construction rising...\"\n    },\n    {\n      \"step\": 3,\n      \"transition\": \"Image 3 to Image 4\",\n      \"animation_prompt\": \"Detailed animation prompt describing the finishing touches and lighting change...\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        "simplify": false,
+        "jsonOutput": true,
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "725de5a8-b50e-4333-a28f-81c08c5f4a0c",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "3OQLyfmeCvGh42WH",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Nalazimo tačnu putanju do teksta u onome što si mi poslao\nconst rawText = items[0].json.candidates[0].content.parts[0].text;\n\n// 2. Čistimo tekst (sklanjamo ```json ako ga je AI slučajno dodao, mada ovde deluje čisto)\nconst cleanText = rawText.replace(/```json|```/g, '').trim();\n\n// 3. Pretvaramo tekstualni JSON u pravi JavaScript objekat\nconst parsedData = JSON.parse(cleanText);\n\n// 4. Vraćamo čiste podatke u n8n\nreturn {\n  json: parsedData\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        0
+      ],
+      "id": "2bca8818-548f-4001-9d0f-e9c5dd6ba494",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=AIzaSyCol5YyPj-0ybvBW0nWmt2cg3DJ4TrbYnM",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={   \"contents\": [     {       \"parts\": [         {           \"text\": \"{{ $node['Code in JavaScript'].json.image_prompts[0].visual_prompt }}\"         }       ]     }   ],   \"generationConfig\": {     \"responseModalities\": [\"IMAGE\"],     \"imageConfig\": {         \"aspectRatio\": \"16:9\"      }   } }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        768,
+        0
+      ],
+      "id": "97c11c8b-9f9c-45d9-97ee-a170ead0c465",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=AIzaSyCol5YyPj-0ybvBW0nWmt2cg3DJ4TrbYnM",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"{{ $node['Code in JavaScript'].json.image_prompts[1].visual_prompt }}\"\n        },\n        {\n          \"inlineData\": {\n            \"mimeType\": \"image/png\",\n            \"data\": \"{{ $node['Code Image 1'].json.base64_image }}\"\n          }\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"responseModalities\": [\"IMAGE\"],\n    \"imageConfig\": {\n        \"aspectRatio\": \"9:16\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1168,
+        0
+      ],
+      "id": "8f853854-9d67-4e3e-a76a-bc24b25deb4a",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Uzimamo podatke iz prethodnog HTTP Request čvora\nconst item = items[0].json;\n\n// Ponekad je struktura duboka, ovo je siguran način da dođemo do slike\nlet base64Data = null;\n\n// Provera 1: Da li je podatak u candidates[0]?\nif (item.candidates && item.candidates[0] && item.candidates[0].content && item.candidates[0].content.parts && item.candidates[0].content.parts[0].inlineData) {\n    base64Data = item.candidates[0].content.parts[0].inlineData.data;\n} \n// Provera 2: Možda je direktno u outputs (za svaki slučaj)\nelse if (item.content && item.content.parts && item.content.parts[0].inlineData) {\n    base64Data = item.content.parts[0].inlineData.data;\n}\n\n// Ako nismo našli sliku, prijavljujemo grešku da znaš šta se dešava\nif (!base64Data) {\n    throw new Error(\"NISAM NAŠAO SLIKU! Proveri da li je prethodni 'HTTP Request' uspešno vratio sliku (pogledaj Output panel tog noda).\");\n}\n\n// Vraćamo čist JSON koji je lak za korišćenje u sledećem koraku\nreturn [\n    {\n        json: {\n            base64_image: base64Data,\n            mime_type: \"image/png\"\n        }\n    }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        0
+      ],
+      "id": "01dc1dea-7b4d-422b-a3a5-08bb2c29b69f",
+      "name": "Code Image 1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Uzimamo podatke iz Gen Image 2\nconst item = items[0].json;\nlet base64Data = null;\n\nif (item.candidates && item.candidates[0] && item.candidates[0].content && item.candidates[0].content.parts && item.candidates[0].content.parts[0].inlineData) {\n    base64Data = item.candidates[0].content.parts[0].inlineData.data;\n} else if (item.content && item.content.parts && item.content.parts[0].inlineData) {\n    base64Data = item.content.parts[0].inlineData.data;\n}\n\nif (!base64Data) {\n    throw new Error(\"NISAM NAŠAO SLIKU 2! Proveri Output prethodnog noda.\");\n}\n\nreturn [{\n    json: {\n        base64_image: base64Data,\n        mime_type: \"image/png\"\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1376,
+        0
+      ],
+      "id": "e23ad65d-7eea-40dc-acb1-e23299c5776c",
+      "name": "Code Image 2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=AIzaSyCol5YyPj-0ybvBW0nWmt2cg3DJ4TrbYnM",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"{{ $node['Code in JavaScript'].json.image_prompts[2].visual_prompt }}\"\n        },\n        {\n          \"inlineData\": {\n            \"mimeType\": \"image/png\",\n            \"data\": \"{{ $node['Code Image 2'].json.base64_image }}\"\n          }\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"responseModalities\": [\"IMAGE\"],\n    \"imageConfig\": {\n        \"aspectRatio\": \"9:16\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1584,
+        0
+      ],
+      "id": "7f9d2bbd-0485-428f-93c8-252c97877ac5",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=AIzaSyCol5YyPj-0ybvBW0nWmt2cg3DJ4TrbYnM",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"{{ $node['Code in JavaScript'].json.image_prompts[3].visual_prompt }}\"\n        },\n        {\n          \"inlineData\": {\n            \"mimeType\": \"image/png\",\n            \"data\": \"{{ $node['Code Image 3'].json.base64_image }}\"\n          }\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"responseModalities\": [\"IMAGE\"],\n    \"imageConfig\": {\n        \"aspectRatio\": \"9:16\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1968,
+        0
+      ],
+      "id": "b453bea0-7e8b-4649-9fe3-bd5bb9ff49e3",
+      "name": "HTTP Request3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Uzimamo podatke iz prethodnog HTTP Request čvora\nconst item = items[0].json;\nlet base64Data = null;\n\n// Provera 1: Standardna putanja do slike u Gemini odgovoru\nif (item.candidates && item.candidates[0] && item.candidates[0].content && item.candidates[0].content.parts && item.candidates[0].content.parts[0].inlineData) {\n    base64Data = item.candidates[0].content.parts[0].inlineData.data;\n} \n// Provera 2: Alternativna putanja (za svaki slučaj)\nelse if (item.content && item.content.parts && item.content.parts[0].inlineData) {\n    base64Data = item.content.parts[0].inlineData.data;\n}\n\n// Ako slika nije pronađena, prijavljujemo grešku\nif (!base64Data) {\n    throw new Error(\"NISAM NAŠAO SLIKU! Proveri Output prethodnog HTTP Request noda.\");\n}\n\n// Vraćamo čist podatak spreman za sledeći korak (Video ili sledeća slika)\nreturn [\n    {\n        json: {\n            base64_image: base64Data,\n            mime_type: \"image/png\"\n        }\n    }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        0
+      ],
+      "id": "6bfe1252-73b2-4880-93c7-0397af67e292",
+      "name": "Code Image 3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Uzimamo podatke iz prethodnog HTTP Request čvora\nconst item = items[0].json;\nlet base64Data = null;\n\n// Provera 1: Standardna putanja do slike u Gemini odgovoru\nif (item.candidates && item.candidates[0] && item.candidates[0].content && item.candidates[0].content.parts && item.candidates[0].content.parts[0].inlineData) {\n    base64Data = item.candidates[0].content.parts[0].inlineData.data;\n} \n// Provera 2: Alternativna putanja (za svaki slučaj)\nelse if (item.content && item.content.parts && item.content.parts[0].inlineData) {\n    base64Data = item.content.parts[0].inlineData.data;\n}\n\n// Ako slika nije pronađena, prijavljujemo grešku\nif (!base64Data) {\n    throw new Error(\"NISAM NAŠAO SLIKU! Proveri Output prethodnog HTTP Request noda.\");\n}\n\n// Vraćamo čist podatak spreman za sledeći korak (Video ili sledeća slika)\nreturn [\n    {\n        json: {\n            base64_image: base64Data,\n            mime_type: \"image/png\"\n        }\n    }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2176,
+        0
+      ],
+      "id": "d30ec0a5-7713-4695-bd44-a5d3b1fb0e1b",
+      "name": "Code Image "
+    },
+    {
+      "parameters": {
+        "jsCode": "// VIDEO 1: Slika 1 -> Slika 2\nconst promptData = $('Code in JavaScript').first().json;\nconst imgStart = $('Code Image 1').first().json;\nconst imgEnd = $('Code Image 2').first().json;\n\nreturn {\n  json: {\n    prompt: promptData.video_prompts[0].animation_prompt,\n    image_start: imgStart.base64_image,\n    image_end: imgEnd.base64_image\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        -336
+      ],
+      "id": "b3adccbc-cd44-42bf-9a88-63055e1d87de",
+      "name": "Prep Video 1 Data"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-generate-preview:predictLongRunning?key=AIzaSyCol5YyPj-0ybvBW0nWmt2cg3DJ4TrbYnM",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n  \"instances\": [\n    {\n      \"prompt\": \"{{ $json.prompt }}\",\n      \"image\": {\n        \"mimeType\": \"image/png\",\n        \"bytesBase64Encoded\": \"{{ $json.image_start }}\"\n      }\n    }\n  ],\n  \"parameters\": {\n    \"aspectRatio\": \"9:16\",\n    \"lastFrame\": {\n      \"mimeType\": \"image/png\",\n      \"bytesBase64Encoded\": \"{{ $json.image_end }}\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        240,
+        -336
+      ],
+      "id": "bca6fdea-08f1-4132-933b-314032fab7b6",
+      "name": "Start Video 1"
+    },
+    {
+      "parameters": {
+        "amount": 60
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        432,
+        -336
+      ],
+      "id": "a50d8fd8-aaa0-4c52-b042-4657c3fbea87",
+      "name": "Wait V1 (60s)",
+      "webhookId": "779b0e77-81ba-47fb-9e1d-c05b2d1ed2d5"
+    },
+    {
+      "parameters": {
+        "url": "=https://generativelanguage.googleapis.com/v1beta/{{ $node[\"Start Video 1\"].json.name }}?key=AIzaSyCol5YyPj-0ybvBW0nWmt2cg3DJ4TrbYnM",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        640,
+        -336
+      ],
+      "id": "6eacddc1-096d-4dbb-9d10-b10032fc66fa",
+      "name": "Get Video 1 Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "// VIDEO 2: Slika 2 -> Slika 3\nconst promptData = $('Code in JavaScript').first().json;\nconst imgStart = $('Code Image 2').first().json;\nconst imgEnd = $('Code Image 3').first().json;\n\nreturn {\n  json: {\n    prompt: promptData.video_prompts[1].animation_prompt,\n    image_start: imgStart.base64_image,\n    image_end: imgEnd.base64_image\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        -336
+      ],
+      "id": "8ae5d7e8-d094-47c1-a152-970c39326796",
+      "name": "Prep Video 2 Data"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-generate-preview:predictLongRunning?key=AIzaSyCol5YyPj-0ybvBW0nWmt2cg3DJ4TrbYnM",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n  \"instances\": [\n    {\n      \"prompt\": \"{{ $json.prompt }}\",\n      \"image\": {\n        \"inlineData\": {\n          \"mimeType\": \"image/png\",\n          \"data\": \"{{ $json.image_start }}\"\n        }\n      }\n    }\n  ],\n  \"parameters\": {\n    \"lastFrame\": {\n      \"inlineData\": {\n        \"mimeType\": \"image/png\",\n        \"data\": \"{{ $json.image_end }}\"\n      }\n    },\n    \"aspectRatio\": \"9:16\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1040,
+        -336
+      ],
+      "id": "d8fe4b69-95e5-4bea-9bab-a1eb704b5142",
+      "name": "Start Video 2"
+    },
+    {
+      "parameters": {
+        "amount": 60
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1232,
+        -336
+      ],
+      "id": "54ddbd9a-414a-40d8-a447-beeb266682d0",
+      "name": "Wait V2 (60s)",
+      "webhookId": "91df7293-dbdf-4fe7-b411-e01f3f649eb1"
+    },
+    {
+      "parameters": {
+        "url": "=https://generativelanguage.googleapis.com/v1beta/{{ $node[\"Start Video 2\"].json.name }}?key=AIzaSyCol5YyPj-0ybvBW0nWmt2cg3DJ4TrbYnM",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1440,
+        -336
+      ],
+      "id": "c6f7f873-c533-443d-bab8-21670b21db53",
+      "name": "Get Video 2 Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "// VIDEO 3: Slika 3 -> Slika 4\nconst promptData = $('Code in JavaScript').first().json;\nconst imgStart = $('Code Image 3').first().json;\n// Tvoj poslednji čvor se zove \"Code Image \" sa razmakom, moramo to poštovati\nconst imgEnd = $('Code Image ').first().json;\n\nreturn {\n  json: {\n    prompt: promptData.video_prompts[2].animation_prompt,\n    image_start: imgStart.base64_image,\n    image_end: imgEnd.base64_image\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1632,
+        -336
+      ],
+      "id": "c1d38a49-f467-4967-8435-3eea09a663fd",
+      "name": "Prep Video 3 Data"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-generate-preview:predictLongRunning?key=AIzaSyCol5YyPj-0ybvBW0nWmt2cg3DJ4TrbYnM",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n  \"instances\": [\n    {\n      \"prompt\": \"{{ $json.prompt }}\",\n      \"image\": {\n        \"inlineData\": {\n          \"mimeType\": \"image/png\",\n          \"data\": \"{{ $json.image_start }}\"\n        }\n      }\n    }\n  ],\n  \"parameters\": {\n    \"lastFrame\": {\n      \"inlineData\": {\n        \"mimeType\": \"image/png\",\n        \"data\": \"{{ $json.image_end }}\"\n      }\n    },\n    \"aspectRatio\": \"9:16\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1840,
+        -336
+      ],
+      "id": "584b0c8a-7056-4f87-8713-35fa0ec589af",
+      "name": "Start Video 3"
+    },
+    {
+      "parameters": {
+        "amount": 60
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2032,
+        -336
+      ],
+      "id": "a7e17a32-c0c7-4670-bed5-3d01ddf10404",
+      "name": "Wait V3 (60s)",
+      "webhookId": "1d8c4b17-5b45-4489-a925-3be18df37c5f"
+    },
+    {
+      "parameters": {
+        "url": "=https://generativelanguage.googleapis.com/v1beta/{{ $node[\"Start Video 3\"].json.name }}?key=AIzaSyCol5YyPj-0ybvBW0nWmt2cg3DJ4TrbYnM",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2240,
+        -336
+      ],
+      "id": "abec8669-4fba-4cb0-a313-8bb3d79aff69",
+      "name": "Get Video 3 Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Uzimamo linkove ka generisanim videima\n// Pazi: Google API struktura je duboka\nconst v1 = $('Get Video 1 Result').first().json.response.generateVideoResponse.generatedSamples[0].video.uri;\nconst v2 = $('Get Video 2 Result').first().json.response.generateVideoResponse.generatedSamples[0].video.uri;\nconst v3 = $('Get Video 3 Result').first().json.response.generateVideoResponse.generatedSamples[0].video.uri;\n\nreturn {\n  json: {\n    files: [v1, v2, v3]\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        -544
+      ],
+      "id": "69e8302a-9ef5-446c-b365-f2e2d53ff906",
+      "name": "Prepare File List"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.cloudconvert.com/v2/jobs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiZWYzNGVjOTA1M2EwNzk1ZWI0YWJlNTZmZjM3NzY0Y2M0OTk4ODcyMDRmNGZiYjAxNzIyOTdiMzg2MDkyMjBjZmFlZDY0MDQ4YWIwZGE2YWIiLCJpYXQiOjE3NzAwMjgyNzQuNzc1MzA4LCJuYmYiOjE3NzAwMjgyNzQuNzc1MzEsImV4cCI6NDkyNTcwMTg3NC43Njg2OTgsInN1YiI6IjcwOTQyMjcxIiwic2NvcGVzIjpbInVzZXIucmVhZCIsInVzZXIud3JpdGUiLCJ0YXNrLnJlYWQiLCJ0YXNrLndyaXRlIiwid2ViaG9vay5yZWFkIiwid2ViaG9vay53cml0ZSIsInByZXNldC5yZWFkIiwicHJlc2V0LndyaXRlIl19.sW4PvH9aSKNoYXAPvOuu5W9eKR5RNSIDizgHbi2fIoRjZ7L5EvcqATwoWGFk99V9HX644UAwArMHNyx85qqihqhUxLx10J2suAWVfcbF-uGON4BFmG0IhooM0NU2hc1ZgIJIefta__pfI4nN1-MmmGXtZk7m7eaxktPpmwc-DwzNIA5getadHnIRpD8j7Eg7sSdUGXE7pR9UjjdUtzhpko-Rohts6f09mYs4nu9SrkMoW1P4vf2Xis2SEvgeAl0-tQmK3vSsnt8ACSlaO6QdPIkHVip84EPxoQmFWE3KYGk09jR5DwKc4uUvu4NBXyOVAv2HeABCbeEHv3gGQKH8Z8W9zpoCvZOtd0BnqR-uehbybAGXUp5w8N1COxqHIOjxwDPxaI20PajoPHsEmNps5NEfj9AgeFOzeNi6lehC5BUBuSJ9S0CggStenaEO6Ggi5ve0j5h-QicFupI_QipvpRVvRXC0AVbUJi2cfLFWEbFEa1Pmf5cvfNBFcreJkEHHHcCOJ_YgCOdikDaHchPxHf3bKPMlSI4VwiwiqWRHrZiGBuA7oQSHhJEL3Ka7iwQPHe-kGPPkQsguy5VrP_NE0O9vWv0eaGt6QtqvinEsvkUCdluJqd-c37P5BKTxNhYHiFckLDGyvHhIMZdCcK2ARj5T9jsEIlAPGnvf_L3fv0A"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n    \"tasks\": {\n        \"import-1\": {\n            \"operation\": \"import/url\",\n            \"url\": \"{{ $json.files[0] }}\"\n        },\n        \"import-2\": {\n            \"operation\": \"import/url\",\n            \"url\": \"{{ $json.files[1] }}\"\n        },\n        \"import-3\": {\n            \"operation\": \"import/url\",\n            \"url\": \"{{ $json.files[2] }}\"\n        },\n        \"merge-videos\": {\n            \"operation\": \"merge\",\n            \"input\": [\"import-1\", \"import-2\", \"import-3\"],\n            \"output_format\": \"mp4\"\n        },\n        \"export-1\": {\n            \"operation\": \"export/url\",\n            \"input\": [\"merge-videos\"]\n        }\n    }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1072,
+        -544
+      ],
+      "id": "4467be82-3914-4136-9592-4ad06acf9acb",
+      "name": "CloudConvert Start Merge"
+    },
+    {
+      "parameters": {
+        "amount": 60
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1264,
+        -544
+      ],
+      "id": "9dfa075e-86e7-4b89-a6dc-4fa7f93027a4",
+      "name": "Wait CC (60s)",
+      "webhookId": "d053fd92-1217-4baf-9e6f-cda058808cdf"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudconvert.com/v2/jobs/{{ $node[\"CloudConvert Start Merge\"].json.data.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiZWYzNGVjOTA1M2EwNzk1ZWI0YWJlNTZmZjM3NzY0Y2M0OTk4ODcyMDRmNGZiYjAxNzIyOTdiMzg2MDkyMjBjZmFlZDY0MDQ4YWIwZGE2YWIiLCJpYXQiOjE3NzAwMjgyNzQuNzc1MzA4LCJuYmYiOjE3NzAwMjgyNzQuNzc1MzEsImV4cCI6NDkyNTcwMTg3NC43Njg2OTgsInN1YiI6IjcwOTQyMjcxIiwic2NvcGVzIjpbInVzZXIucmVhZCIsInVzZXIud3JpdGUiLCJ0YXNrLnJlYWQiLCJ0YXNrLndyaXRlIiwid2ViaG9vay5yZWFkIiwid2ViaG9vay53cml0ZSIsInByZXNldC5yZWFkIiwicHJlc2V0LndyaXRlIl19.sW4PvH9aSKNoYXAPvOuu5W9eKR5RNSIDizgHbi2fIoRjZ7L5EvcqATwoWGFk99V9HX644UAwArMHNyx85qqihqhUxLx10J2suAWVfcbF-uGON4BFmG0IhooM0NU2hc1ZgIJIefta__pfI4nN1-MmmGXtZk7m7eaxktPpmwc-DwzNIA5getadHnIRpD8j7Eg7sSdUGXE7pR9UjjdUtzhpko-Rohts6f09mYs4nu9SrkMoW1P4vf2Xis2SEvgeAl0-tQmK3vSsnt8ACSlaO6QdPIkHVip84EPxoQmFWE3KYGk09jR5DwKc4uUvu4NBXyOVAv2HeABCbeEHv3gGQKH8Z8W9zpoCvZOtd0BnqR-uehbybAGXUp5w8N1COxqHIOjxwDPxaI20PajoPHsEmNps5NEfj9AgeFOzeNi6lehC5BUBuSJ9S0CggStenaEO6Ggi5ve0j5h-QicFupI_QipvpRVvRXC0AVbUJi2cfLFWEbFEa1Pmf5cvfNBFcreJkEHHHcCOJ_YgCOdikDaHchPxHf3bKPMlSI4VwiwiqWRHrZiGBuA7oQSHhJEL3Ka7iwQPHe-kGPPkQsguy5VrP_NE0O9vWv0eaGt6QtqvinEsvkUCdluJqd-c37P5BKTxNhYHiFckLDGyvHhIMZdCcK2ARj5T9jsEIlAPGnvf_L3fv0A"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1472,
+        -544
+      ],
+      "id": "5f1d6007-6220-4f7c-b820-4f9f24b5e116",
+      "name": "Check CC Job Status"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.data.tasks.filter(t => t.operation === 'export/url')[0].result.files[0].url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1664,
+        -544
+      ],
+      "id": "e4e6e75a-1025-4b4e-ae2d-6c84c470bb2f",
+      "name": "Download Final Video"
+    },
+    {
+      "parameters": {
+        "name": "Cinematic_Workflow_Final.mp4",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "root",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1872,
+        -544
+      ],
+      "id": "8e159298-32cd-4207-bea3-f73d1a059cf9",
+      "name": "Upload to Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "R0arEdk6mN0sJA6n",
+          "name": "Google Drive account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code Image 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Image 1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code Image 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Image 2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Code Image 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Image 3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "Code Image ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Video 1 Data": {
+      "main": [
+        [
+          {
+            "node": "Start Video 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Video 1": {
+      "main": [
+        [
+          {
+            "node": "Wait V1 (60s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait V1 (60s)": {
+      "main": [
+        [
+          {
+            "node": "Get Video 1 Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Video 1 Result": {
+      "main": [
+        [
+          {
+            "node": "Prep Video 2 Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Video 2 Data": {
+      "main": [
+        [
+          {
+            "node": "Start Video 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Video 2": {
+      "main": [
+        [
+          {
+            "node": "Wait V2 (60s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait V2 (60s)": {
+      "main": [
+        [
+          {
+            "node": "Get Video 2 Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Video 2 Result": {
+      "main": [
+        [
+          {
+            "node": "Prep Video 3 Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Video 3 Data": {
+      "main": [
+        [
+          {
+            "node": "Start Video 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Video 3": {
+      "main": [
+        [
+          {
+            "node": "Wait V3 (60s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait V3 (60s)": {
+      "main": [
+        [
+          {
+            "node": "Get Video 3 Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Image ": {
+      "main": [
+        [
+          {
+            "node": "Prep Video 1 Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare File List": {
+      "main": [
+        [
+          {
+            "node": "CloudConvert Start Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CloudConvert Start Merge": {
+      "main": [
+        [
+          {
+            "node": "Wait CC (60s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait CC (60s)": {
+      "main": [
+        [
+          {
+            "node": "Check CC Job Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check CC Job Status": {
+      "main": [
+        [
+          {
+            "node": "Download Final Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Final Video": {
+      "main": [
+        [
+          {
+            "node": "Upload to Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Video 3 Result": {
+      "main": [
+        [
+          {
+            "node": "Prepare File List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "5e27fb61-ce10-4336-ae41-98c3a796351a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "412b0ebf2f7add3684b1c4ed45b3786db346dbe6b855d6c2025b9188553bd9e1"
+  },
+  "id": "OKlpTbuxIt8NY9-JemgUp",
+  "tags": []
+}
